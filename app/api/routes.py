@@ -2,15 +2,18 @@ from fastapi import APIRouter, HTTPException
 
 from app.config import JOURNAL_KEYWORDS, JOURNAL_DESCRIPTIONS, EMBEDDING_MODEL_NAME
 from app.schemas import ClassificationRequest, ClassificationResponse, ClassificationScore
+from app.schemas import ClassifierResult, CompareResponse
 from app.services.keyword_classifier import KeywordMatcher
 from app.services.tfidf_classifier import TfidfClassifier
 from app.services.embedding_classifier import EmbeddingClassifier
+from app.services.compare_service import CompareService
 
 router = APIRouter()
 
 keyword_matching_classifier = KeywordMatcher(JOURNAL_KEYWORDS)
 tfidf_classifier = TfidfClassifier(JOURNAL_DESCRIPTIONS)
 embedding_classifier = EmbeddingClassifier(JOURNAL_DESCRIPTIONS, EMBEDDING_MODEL_NAME)
+compare_service = CompareService(keyword_matching_classifier, tfidf_classifier, embedding_classifier)
 
 @router.post("/classify/keyword-matching", response_model=ClassificationResponse)
 def classify_keyword_matching(request: ClassificationRequest):
@@ -93,3 +96,21 @@ def classify_embedding(request: ClassificationRequest):
             "top_supporting_sentences": top_supporting_sentences,
         }
     )
+
+@router.post("/classify/compare", response_model=CompareResponse)
+def classify_compare(request: ClassificationRequest):
+    """Run all three classifiers on the same abstract and return their top prediction and score."""
+    try:
+        results = compare_service.compare(request.abstract)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {
+        "method": "compare",
+        "results": results,
+        "final_decision": {
+            "predicted_category": results["embedding"]["predicted_category"],
+            "selected_method": "embedding",
+            "reason": "Embedding classifier captures semantic similarity better than lexical matching and TF-IDF methods."
+        }
+    }
