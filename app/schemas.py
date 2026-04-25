@@ -9,5 +9,6 @@ class ClassificationScore(BaseModel):
 
 class ClassificationResponse(BaseModel):
     method: str
-    predicted_class: str
+    predicted_category: str | None
     scores: list[ClassificationScore]
+    reasoning: dict | None = None
