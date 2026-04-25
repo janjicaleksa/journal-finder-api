@@ -1,14 +1,16 @@
 from fastapi import APIRouter, HTTPException
 
-from app.config import JOURNAL_KEYWORDS, JOURNAL_DESCRIPTIONS
+from app.config import JOURNAL_KEYWORDS, JOURNAL_DESCRIPTIONS, EMBEDDING_MODEL_NAME
 from app.schemas import ClassificationRequest, ClassificationResponse, ClassificationScore
 from app.services.keyword_classifier import KeywordMatcher
 from app.services.tfidf_classifier import TfidfClassifier
+from app.services.embedding_classifier import EmbeddingClassifier
 
 router = APIRouter()
 
 keyword_matching_classifier = KeywordMatcher(JOURNAL_KEYWORDS)
 tfidf_classifier = TfidfClassifier(JOURNAL_DESCRIPTIONS)
+embedding_classifier = EmbeddingClassifier(JOURNAL_DESCRIPTIONS, EMBEDDING_MODEL_NAME)
 
 @router.post("/classify/keyword-matching", response_model=ClassificationResponse)
 def classify_keyword_matching(request: ClassificationRequest):
@@ -61,5 +63,33 @@ def classify_tfidf(request: ClassificationRequest):
         reasoning={
             "ngram_range": [1, 2],
             "top_matching_terms": top_matching_terms,
+        }
+    )
+
+@router.post("/classify/embedding", response_model=ClassificationResponse)
+def classify_embedding(request: ClassificationRequest):
+    """Classify a paper abstract into a journal category using sentence embeddings."""
+    try:
+        results = embedding_classifier.classify(request.abstract)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    predicted_category = results["predicted_category"]
+    scores = results["scores"]
+
+    top_supporting_sentences = []
+    if predicted_category is not None:
+        top_supporting_sentences = embedding_classifier.get_top_supporting_sentences(
+            abstract=request.abstract,
+            predicted_category=predicted_category
+        )
+
+    return ClassificationResponse(
+        method="sentence_embedding",
+        predicted_category=predicted_category,
+        scores=[ClassificationScore(label=s["label"], score=s["score"]) for s in scores],
+        reasoning={
+            "model": embedding_classifier.embedding_model_name,
+            "top_supporting_sentences": top_supporting_sentences,
         }
     )

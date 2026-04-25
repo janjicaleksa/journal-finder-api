@@ -105,3 +105,5 @@ JOURNAL_DESCRIPTIONS = {
         "fuel cells energy storage photovoltaic systems sustainable energy"
     )
 }'''
+
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
