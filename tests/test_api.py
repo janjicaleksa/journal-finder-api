@@ -4,13 +4,14 @@ API integration tests for all four classification endpoints and the health check
 All three route-level classifiers and the compare_service instance are replaced
 with MagicMocks via monkeypatch so tests are fully isolated and instant.
 """
-import pytest
+
 from unittest.mock import MagicMock
+
+import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
 import app.api.routes as routes_module
-
+from app.main import app
 
 client = TestClient(app)
 
@@ -26,7 +27,11 @@ def kw_result(label: str, score: float) -> dict:
     return {
         "predicted_category": label,
         "scores": [
-            {"label": label, "score": score, "matched_keywords": ["neural network", "deep learning"]},
+            {
+                "label": label,
+                "score": score,
+                "matched_keywords": ["neural network", "deep learning"],
+            },
             {"label": "Physics", "score": 0.0, "matched_keywords": []},
         ],
     }
@@ -39,7 +44,6 @@ def tfidf_result(label: str | None, score: float) -> dict:
             {"label": label or "AI", "score": score},
             {"label": "Physics", "score": 0.0},
         ],
-        "abstract_vector": MagicMock(),
     }
 
 
@@ -56,8 +60,8 @@ def emb_result(label: str | None, score: float) -> dict:
 def cmp_result(label: str | None) -> dict:
     return {
         "keyword_matching": {"predicted_category": label, "score": 0.8},
-        "tfidf":            {"predicted_category": label, "score": 0.75},
-        "embedding":        {"predicted_category": label, "score": 0.92},
+        "tfidf": {"predicted_category": label, "score": 0.75},
+        "embedding": {"predicted_category": label, "score": 0.92},
     }
 
 
@@ -204,14 +208,15 @@ class TestTfidfEndpoint:
         tc.classify.return_value = tfidf_result("Physics", 0.75)
         tc.get_top_matching_terms.return_value = [{"term": "quantum", "score": 0.5}]
         body = client.post(self.URL, json={"abstract": ABSTRACT}).json()
-        assert body["reasoning"]["top_matching_terms"] == [{"term": "quantum", "score": 0.5}]
+        assert body["reasoning"]["top_matching_terms"] == [
+            {"term": "quantum", "score": 0.5}
+        ]
 
     def test_no_match_returns_200_with_none_category(self, mocks):
         _, tc, _, _ = mocks
         tc.classify.return_value = {
             "predicted_category": None,
             "scores": [{"label": "Physics", "score": 0.0}],
-            "abstract_vector": MagicMock(),
         }
         response = client.post(self.URL, json={"abstract": ABSTRACT})
         assert response.status_code == 200
@@ -222,19 +227,17 @@ class TestTfidfEndpoint:
         tc.classify.return_value = {
             "predicted_category": None,
             "scores": [{"label": "Physics", "score": 0.0}],
-            "abstract_vector": MagicMock(),
         }
         client.post(self.URL, json={"abstract": ABSTRACT})
         tc.get_top_matching_terms.assert_not_called()
 
     def test_get_top_matching_terms_called_with_correct_args(self, mocks):
         _, tc, _, _ = mocks
-        result = tfidf_result("Physics", 0.75)
-        tc.classify.return_value = result
+        tc.classify.return_value = tfidf_result("Physics", 0.75)
         tc.get_top_matching_terms.return_value = []
         client.post(self.URL, json={"abstract": ABSTRACT})
         tc.get_top_matching_terms.assert_called_once_with(
-            abstract_vector=result["abstract_vector"],
+            abstract=ABSTRACT,
             predicted_category="Physics",
         )
 

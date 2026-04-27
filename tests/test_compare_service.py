@@ -5,8 +5,11 @@ All three classifiers are replaced with MagicMock objects so these tests
 cover only CompareService logic (score extraction, None handling, delegation)
 and not the classifiers themselves.
 """
-import pytest
+
 from unittest.mock import MagicMock
+
+import pytest
+
 from app.services.compare_service import CompareService
 
 
@@ -29,9 +32,15 @@ def build_service(
     tfidf_mock = MagicMock()
     embedding_mock = MagicMock()
 
-    keyword_mock.classify.return_value = keyword_result or make_classifier_result("biology", 0.8)
-    tfidf_mock.classify.return_value = tfidf_result or make_classifier_result("biology", 0.75)
-    embedding_mock.classify.return_value = embedding_result or make_classifier_result("biology", 0.9)
+    keyword_mock.classify.return_value = keyword_result or make_classifier_result(
+        "biology", 0.8
+    )
+    tfidf_mock.classify.return_value = tfidf_result or make_classifier_result(
+        "biology", 0.75
+    )
+    embedding_mock.classify.return_value = embedding_result or make_classifier_result(
+        "biology", 0.9
+    )
 
     return CompareService(keyword_mock, tfidf_mock, embedding_mock)
 
@@ -165,7 +174,10 @@ class TestComparePredictedCategory:
         assert result["embedding"]["predicted_category"] == "biology"
 
     def test_none_predicted_category_passed_through(self):
-        no_match = {"predicted_category": None, "scores": [{"label": "biology", "score": 0.0}]}
+        no_match = {
+            "predicted_category": None,
+            "scores": [{"label": "biology", "score": 0.0}],
+        }
         svc = build_service(keyword_result=no_match)
         result = svc.compare(ABSTRACT)
         assert result["keyword_matching"]["predicted_category"] is None
@@ -193,19 +205,28 @@ class TestCompareScoreExtraction:
         assert result["embedding"]["score"] == 0.92
 
     def test_zero_score_returns_none_for_keyword(self):
-        no_match = {"predicted_category": None, "scores": [{"label": "biology", "score": 0.0}]}
+        no_match = {
+            "predicted_category": None,
+            "scores": [{"label": "biology", "score": 0.0}],
+        }
         svc = build_service(keyword_result=no_match)
         result = svc.compare(ABSTRACT)
         assert result["keyword_matching"]["score"] is None
 
     def test_zero_score_returns_none_for_tfidf(self):
-        no_match = {"predicted_category": None, "scores": [{"label": "biology", "score": 0.0}]}
+        no_match = {
+            "predicted_category": None,
+            "scores": [{"label": "biology", "score": 0.0}],
+        }
         svc = build_service(tfidf_result=no_match)
         result = svc.compare(ABSTRACT)
         assert result["tfidf"]["score"] is None
 
     def test_zero_score_returns_none_for_embedding(self):
-        no_match = {"predicted_category": None, "scores": [{"label": "biology", "score": 0.0}]}
+        no_match = {
+            "predicted_category": None,
+            "scores": [{"label": "biology", "score": 0.0}],
+        }
         svc = build_service(embedding_result=no_match)
         result = svc.compare(ABSTRACT)
         assert result["embedding"]["score"] is None
@@ -224,7 +245,10 @@ class TestCompareScoreExtraction:
 
 class TestCompareClassifiersAreIndependent:
     def test_keyword_match_tfidf_no_match(self):
-        no_match = {"predicted_category": None, "scores": [{"label": "x", "score": 0.0}]}
+        no_match = {
+            "predicted_category": None,
+            "scores": [{"label": "x", "score": 0.0}],
+        }
         svc = build_service(
             keyword_result=make_classifier_result("biology", 0.6),
             tfidf_result=no_match,
@@ -235,7 +259,10 @@ class TestCompareClassifiersAreIndependent:
         assert result["tfidf"]["score"] is None
 
     def test_all_no_match_returns_all_none(self):
-        no_match = {"predicted_category": None, "scores": [{"label": "x", "score": 0.0}]}
+        no_match = {
+            "predicted_category": None,
+            "scores": [{"label": "x", "score": 0.0}],
+        }
         svc = build_service(
             keyword_result=no_match,
             tfidf_result=no_match,

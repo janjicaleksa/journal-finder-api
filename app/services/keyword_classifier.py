@@ -3,7 +3,7 @@ class KeywordMatcher:
 
     def __init__(self, journal_keywords: dict[str, list[str]]):
         """Initialization of the Keyword Matcher
-        
+
         Notes: - Journal keywords are the predefined keywords that are used to classify the papers into the journal topics.
         """
         if not journal_keywords:
@@ -32,11 +32,9 @@ class KeywordMatcher:
 
             score = len(matched) / len(keywords)
 
-            scores.append({
-                "label": label,
-                "score": round(score, 2),
-                "matched_keywords": matched
-            })
+            scores.append(
+                {"label": label, "score": round(score, 2), "matched_keywords": matched}
+            )
 
         scores.sort(key=lambda x: x["score"], reverse=True)
 

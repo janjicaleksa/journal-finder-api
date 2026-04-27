@@ -10,9 +10,11 @@ Existing test_embedding_classifier.py tests are unaffected: they patch
 the local 'SentenceTransformer' reference in app.services.embedding_classifier,
 which correctly overrides whatever was imported during module load.
 """
+
 import sys
-import numpy as np
 from unittest.mock import MagicMock
+
+import numpy as np
 
 if "sentence_transformers" not in sys.modules:
     _mock_instance = MagicMock()

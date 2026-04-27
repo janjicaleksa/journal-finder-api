@@ -1,8 +1,6 @@
-import numpy as np
 import pytest
-from scipy.sparse import issparse
-from app.services.tfidf_classifier import TfidfClassifier
 
+from app.services.tfidf_classifier import TfidfClassifier
 
 JOURNAL_DESCRIPTIONS = {
     "biology": "Study of living organisms, cells, genetics, DNA, proteins and ecosystems.",
@@ -86,14 +84,6 @@ class TestTfidfClassifyReturnStructure:
         result = self.clf.classify("cells and DNA proteins")
         assert "scores" in result
 
-    def test_has_abstract_vector_key(self):
-        result = self.clf.classify("cells and DNA proteins")
-        assert "abstract_vector" in result
-
-    def test_abstract_vector_is_sparse(self):
-        result = self.clf.classify("cells and DNA proteins")
-        assert issparse(result["abstract_vector"])
-
     def test_scores_length_equals_number_of_journals(self):
         result = self.clf.classify("cells and DNA proteins")
         assert len(result["scores"]) == len(JOURNAL_DESCRIPTIONS)
@@ -163,12 +153,18 @@ class TestTfidfClassifyScoring:
 
 class TestTfidfSingleJournal:
     def test_single_journal_matching_abstract(self):
-        clf = TfidfClassifier({"medicine": "Study of diseases, viruses, antibodies and vaccines."})
-        result = clf.classify("Virus neutralisation by antibodies and vaccine efficacy.")
+        clf = TfidfClassifier(
+            {"medicine": "Study of diseases, viruses, antibodies and vaccines."}
+        )
+        result = clf.classify(
+            "Virus neutralisation by antibodies and vaccine efficacy."
+        )
         assert result["predicted_category"] == "medicine"
 
     def test_single_journal_no_overlap_returns_none(self):
-        clf = TfidfClassifier({"medicine": "Study of diseases, viruses, antibodies and vaccines."})
+        clf = TfidfClassifier(
+            {"medicine": "Study of diseases, viruses, antibodies and vaccines."}
+        )
         result = clf.classify("zzz xxx yyy aaa bbb ccc")
         assert result["predicted_category"] is None
 
@@ -183,47 +179,41 @@ class TestGetTopMatchingTerms:
         self.clf = TfidfClassifier(JOURNAL_DESCRIPTIONS)
 
     def test_returns_list(self):
-        result = self.clf.classify("cells and DNA proteins genetics")
-        terms = self.clf.get_top_matching_terms(result["abstract_vector"], "biology")
+        terms = self.clf.get_top_matching_terms("cells and DNA proteins genetics", "biology")
         assert isinstance(terms, list)
 
     def test_each_term_entry_has_required_keys(self):
-        result = self.clf.classify("cells and DNA proteins genetics")
-        terms = self.clf.get_top_matching_terms(result["abstract_vector"], "biology")
+        terms = self.clf.get_top_matching_terms("cells and DNA proteins genetics", "biology")
         for entry in terms:
             assert "term" in entry
             assert "score" in entry
 
     def test_respects_max_reasoning_terms_limit(self):
         clf = TfidfClassifier(JOURNAL_DESCRIPTIONS, max_reasoning_terms=2)
-        result = clf.classify("cells and DNA proteins genetics living organisms")
-        terms = clf.get_top_matching_terms(result["abstract_vector"], "biology")
+        terms = clf.get_top_matching_terms("cells and DNA proteins genetics living organisms", "biology")
         assert len(terms) <= 2
 
     def test_default_limit_is_5(self):
-        result = self.clf.classify("cells and DNA proteins genetics living organisms study")
-        terms = self.clf.get_top_matching_terms(result["abstract_vector"], "biology")
+        terms = self.clf.get_top_matching_terms(
+            "cells and DNA proteins genetics living organisms study", "biology"
+        )
         assert len(terms) <= 5
 
     def test_terms_sorted_by_score_descending(self):
-        result = self.clf.classify("cells and DNA proteins genetics")
-        terms = self.clf.get_top_matching_terms(result["abstract_vector"], "biology")
+        terms = self.clf.get_top_matching_terms("cells and DNA proteins genetics", "biology")
         if len(terms) > 1:
             scores = [t["score"] for t in terms]
             assert scores == sorted(scores, reverse=True)
 
     def test_returns_empty_list_when_no_overlap(self):
-        result = self.clf.classify("zzz xxx yyy aaa bbb")
-        terms = self.clf.get_top_matching_terms(result["abstract_vector"], "biology")
+        terms = self.clf.get_top_matching_terms("zzz xxx yyy aaa bbb", "biology")
         assert terms == []
 
     def test_term_scores_are_floats(self):
-        result = self.clf.classify("cells and DNA proteins genetics")
-        terms = self.clf.get_top_matching_terms(result["abstract_vector"], "biology")
+        terms = self.clf.get_top_matching_terms("cells and DNA proteins genetics", "biology")
         for entry in terms:
             assert isinstance(entry["score"], float)
 
     def test_invalid_predicted_category_raises(self):
-        result = self.clf.classify("cells and DNA proteins genetics")
         with pytest.raises(ValueError):
-            self.clf.get_top_matching_terms(result["abstract_vector"], "nonexistent_label")
+            self.clf.get_top_matching_terms("cells and DNA proteins genetics", "nonexistent_label")

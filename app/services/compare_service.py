@@ -1,6 +1,7 @@
+from app.services.embedding_classifier import EmbeddingClassifier
 from app.services.keyword_classifier import KeywordMatcher
 from app.services.tfidf_classifier import TfidfClassifier
-from app.services.embedding_classifier import EmbeddingClassifier
+
 
 class CompareService:
     """Run all three classifiers on the same abstract and return a side-by-side comparison."""
@@ -31,11 +32,14 @@ class CompareService:
         embedding_result = self.embedding_classifier.classify(abstract)
 
         keyword_predicted_category = keyword_matcher_result["predicted_category"]
-        if keyword_matcher_result["scores"] and keyword_matcher_result["scores"][0]["score"] > 0.0:
+        if (
+            keyword_matcher_result["scores"]
+            and keyword_matcher_result["scores"][0]["score"] > 0.0
+        ):
             keyword_score = keyword_matcher_result["scores"][0]["score"]
         else:
             keyword_score = None
-            
+
         tfidf_predicted_category = tfidf_result["predicted_category"]
         if tfidf_result["scores"] and tfidf_result["scores"][0]["score"] > 0.0:
             tfidf_score = tfidf_result["scores"][0]["score"]

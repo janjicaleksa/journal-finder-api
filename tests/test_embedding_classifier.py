@@ -5,12 +5,13 @@ SentenceTransformer is mocked throughout so tests run without downloading
 any model weights. The mock's encode() returns deterministic unit-normalised
 numpy vectors whose cosine similarity (dot product) is fully predictable.
 """
-import numpy as np
-import pytest
+
 from unittest.mock import MagicMock, patch
 
-from app.services.embedding_classifier import EmbeddingClassifier
+import numpy as np
+import pytest
 
+from app.services.embedding_classifier import EmbeddingClassifier
 
 JOURNAL_DESCRIPTIONS = {
     "biology": "Study of living organisms, cells, genetics, DNA and proteins.",
@@ -20,8 +21,8 @@ JOURNAL_DESCRIPTIONS = {
 
 # Pre-built orthogonal unit vectors – one per journal + one for abstracts.
 # Similarity: abstract_vec is identical to biology_vec → biology wins.
-BIOLOGY_VEC  = np.array([[1.0, 0.0, 0.0]], dtype=np.float32)
-PHYSICS_VEC  = np.array([[0.0, 1.0, 0.0]], dtype=np.float32)
+BIOLOGY_VEC = np.array([[1.0, 0.0, 0.0]], dtype=np.float32)
+PHYSICS_VEC = np.array([[0.0, 1.0, 0.0]], dtype=np.float32)
 CHEMISTRY_VEC = np.array([[0.0, 0.0, 1.0]], dtype=np.float32)
 
 JOURNAL_MATRIX = np.vstack([BIOLOGY_VEC, PHYSICS_VEC, CHEMISTRY_VEC])  # (3, 3)
@@ -77,7 +78,9 @@ def build_classifier(abstract_vec=ABSTRACT_BIOLOGY_VEC):
     """Instantiate EmbeddingClassifier with a mocked SentenceTransformer."""
     with patch("app.services.embedding_classifier.SentenceTransformer") as MockST:
         MockST.return_value = make_mock_model(abstract_vec)
-        return EmbeddingClassifier(JOURNAL_DESCRIPTIONS, embedding_model_name="mock-model")
+        return EmbeddingClassifier(
+            JOURNAL_DESCRIPTIONS, embedding_model_name="mock-model"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +103,9 @@ class TestEmbeddingClassifierInit:
 
     def test_empty_dict_raises(self):
         with patch("app.services.embedding_classifier.SentenceTransformer"):
-            with pytest.raises(ValueError, match="Journal descriptions must not be empty"):
+            with pytest.raises(
+                ValueError, match="Journal descriptions must not be empty"
+            ):
                 EmbeddingClassifier({}, embedding_model_name="mock-model")
 
     def test_none_raises(self):
@@ -244,7 +249,11 @@ class TestEmbeddingClassifySingleJournal:
             abstract_vec = np.array([[0.0, 0.0]], dtype=np.float32)
 
             def encode_side_effect(inputs, normalize_embeddings=True):
-                if isinstance(inputs, list) and len(inputs) == 1 and inputs[0] == "diseases viruses vaccines":
+                if (
+                    isinstance(inputs, list)
+                    and len(inputs) == 1
+                    and inputs[0] == "diseases viruses vaccines"
+                ):
                     return journal_vec
                 return abstract_vec
 
@@ -341,7 +350,9 @@ class TestGetTopSupportingSentences:
 
     def test_sentences_sorted_by_score_descending(self):
         clf = build_classifier()
-        abstract = "Cells are fundamental. Quantum mechanics rules. DNA carries information."
+        abstract = (
+            "Cells are fundamental. Quantum mechanics rules. DNA carries information."
+        )
         result = clf.get_top_supporting_sentences(abstract, "biology", top_k=3)
         if len(result) > 1:
             scores = [e["score"] for e in result]

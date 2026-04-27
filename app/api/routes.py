@@ -1,19 +1,27 @@
 from fastapi import APIRouter, HTTPException
 
-from app.config import JOURNAL_KEYWORDS, JOURNAL_DESCRIPTIONS, EMBEDDING_MODEL_NAME
-from app.schemas import ClassificationRequest, ClassificationResponse, ClassificationScore
-from app.schemas import ClassifierResult, CompareResponse
+from app.config import EMBEDDING_MODEL_NAME, JOURNAL_DESCRIPTIONS, JOURNAL_KEYWORDS
+from app.schemas import (
+    ClassificationRequest,
+    ClassificationResponse,
+    ClassificationScore,
+    ClassifierResult,
+    CompareResponse,
+)
+from app.services.compare_service import CompareService
+from app.services.embedding_classifier import EmbeddingClassifier
 from app.services.keyword_classifier import KeywordMatcher
 from app.services.tfidf_classifier import TfidfClassifier
-from app.services.embedding_classifier import EmbeddingClassifier
-from app.services.compare_service import CompareService
 
 router = APIRouter()
 
 keyword_matching_classifier = KeywordMatcher(JOURNAL_KEYWORDS)
 tfidf_classifier = TfidfClassifier(JOURNAL_DESCRIPTIONS)
 embedding_classifier = EmbeddingClassifier(JOURNAL_DESCRIPTIONS, EMBEDDING_MODEL_NAME)
-compare_service = CompareService(keyword_matching_classifier, tfidf_classifier, embedding_classifier)
+compare_service = CompareService(
+    keyword_matching_classifier, tfidf_classifier, embedding_classifier
+)
+
 
 @router.post("/classify/keyword-matching", response_model=ClassificationResponse)
 def classify_keyword_matching(request: ClassificationRequest):
@@ -32,14 +40,14 @@ def classify_keyword_matching(request: ClassificationRequest):
     return ClassificationResponse(
         method="keyword_matching",
         predicted_category=predicted_category,
-        scores=[ClassificationScore(label=s["label"], score=s["score"]) for s in scores],
+        scores=[
+            ClassificationScore(label=s["label"], score=s["score"]) for s in scores
+        ],
         reasoning={
-            "matched_keywords": {
-                s["label"]: s["matched_keywords"]
-                for s in scores
-            }
-        }
+            "matched_keywords": {s["label"]: s["matched_keywords"] for s in scores}
+        },
     )
+
 
 @router.post("/classify/tfidf", response_model=ClassificationResponse)
 def classify_tfidf(request: ClassificationRequest):
@@ -55,19 +63,22 @@ def classify_tfidf(request: ClassificationRequest):
     top_matching_terms = []
     if predicted_category is not None:
         top_matching_terms = tfidf_classifier.get_top_matching_terms(
-            abstract_vector=results["abstract_vector"],
-            predicted_category=predicted_category
+            abstract=request.abstract,
+            predicted_category=predicted_category,
         )
 
     return ClassificationResponse(
         method="TF-IDF_with_cosine_similarity",
         predicted_category=predicted_category,
-        scores=[ClassificationScore(label=s["label"], score=s["score"]) for s in scores],
+        scores=[
+            ClassificationScore(label=s["label"], score=s["score"]) for s in scores
+        ],
         reasoning={
             "ngram_range": [1, 2],
             "top_matching_terms": top_matching_terms,
-        }
+        },
     )
+
 
 @router.post("/classify/embedding", response_model=ClassificationResponse)
 def classify_embedding(request: ClassificationRequest):
@@ -83,19 +94,21 @@ def classify_embedding(request: ClassificationRequest):
     top_supporting_sentences = []
     if predicted_category is not None:
         top_supporting_sentences = embedding_classifier.get_top_supporting_sentences(
-            abstract=request.abstract,
-            predicted_category=predicted_category
+            abstract=request.abstract, predicted_category=predicted_category
         )
 
     return ClassificationResponse(
         method="sentence_embedding",
         predicted_category=predicted_category,
-        scores=[ClassificationScore(label=s["label"], score=s["score"]) for s in scores],
+        scores=[
+            ClassificationScore(label=s["label"], score=s["score"]) for s in scores
+        ],
         reasoning={
             "model": embedding_classifier.embedding_model_name,
             "top_supporting_sentences": top_supporting_sentences,
-        }
+        },
     )
+
 
 @router.post("/classify/compare", response_model=CompareResponse)
 def classify_compare(request: ClassificationRequest):
@@ -111,6 +124,6 @@ def classify_compare(request: ClassificationRequest):
         "final_decision": {
             "predicted_category": results["embedding"]["predicted_category"],
             "selected_method": "embedding",
-            "reason": "Embedding classifier captures semantic similarity better than lexical matching and TF-IDF methods."
-        }
+            "reason": "Embedding classifier captures semantic similarity better than lexical matching and TF-IDF methods.",
+        },
     }

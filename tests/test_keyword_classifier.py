@@ -1,6 +1,6 @@
 import pytest
-from app.services.keyword_classifier import KeywordMatcher
 
+from app.services.keyword_classifier import KeywordMatcher
 
 JOURNAL_KEYWORDS = {
     "biology": ["cell", "dna", "protein", "gene", "organism"],
@@ -56,7 +56,9 @@ class TestClassifyReturnStructure:
         self.matcher = KeywordMatcher(JOURNAL_KEYWORDS)
 
     def test_returns_dict(self):
-        result = self.matcher.classify("This paper studies cell dna protein gene organism.")
+        result = self.matcher.classify(
+            "This paper studies cell dna protein gene organism."
+        )
         assert isinstance(result, dict)
 
     def test_has_predicted_category_key(self):
@@ -166,10 +168,12 @@ class TestClassifyPredictedCategory:
 
     def test_tie_winner_is_first_after_sort_stability(self):
         # Both journals have 1 keyword each → score 1.0
-        matcher = KeywordMatcher({
-            "a": ["alpha"],
-            "b": ["beta"],
-        })
+        matcher = KeywordMatcher(
+            {
+                "a": ["alpha"],
+                "b": ["beta"],
+            }
+        )
         result = matcher.classify("alpha beta")
         # Both score 1.0; the top entry must be one of the two labels
         assert result["predicted_category"] in ("a", "b")
@@ -184,7 +188,9 @@ class TestClassifyPredictedCategory:
 class TestSingleJournal:
     def test_single_journal_full_match(self):
         matcher = KeywordMatcher({"medicine": ["virus", "antibody", "vaccine"]})
-        result = matcher.classify("The virus was neutralised by the antibody and vaccine.")
+        result = matcher.classify(
+            "The virus was neutralised by the antibody and vaccine."
+        )
         assert result["predicted_category"] == "medicine"
         assert result["scores"][0]["score"] == 1.0
 
